@@ -34,6 +34,8 @@ ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
 #initialization of video stream, frame dimension, pointer to output video
 vs = cv2.VideoCapture(args["input"])
+#vs = cv2.VideoCapture('videos/overpass.mp4')
+print(vs.isOpened())
 writer = None
 (W, H) = (None, None)
 
@@ -46,13 +48,14 @@ try:
 
 #if error occurred in determining the number of frames
 except:
-    print("error has been thrwon to determine the number of frames")
+    print("error has been thrown to determine the number of frames")
     print("no approximation, the exact time can be printed")
     total = -1
 
 while True: #looping over video frames
     #read and grab frames
     (grabbed, frame) = vs.read()
+
 
     #if there is no frame ready to grab, reached end of the file
     if not grabbed:
@@ -61,5 +64,74 @@ while True: #looping over video frames
     #if there is no dimension for frame, provide them
     if W is None or H is None:
         (H, W) = frame.shape[:2]
+        print(frame.shape[:2])
 
-#construct a blob from input frame and perform a Yolo forward pass
+    #construct a blob from input frame and perform a Yolo forward pass
+    blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+    net.setInput(blob)
+    start = time.time()
+    layerOutputs = net.forward(ln)
+    end = time.time()
+
+    #initialization of lists for bounding boxes, confidences and classes
+    boxes = []
+    confidences = []
+    classIDs = []
+
+    for output in layerOutputs:
+        #loop over each of detection
+        for detection  in output:
+            #retrieve the classes and probabilities of detection
+            scores = detection[5:]
+            classID = np.argmax(scores)
+            confidence = scores[classID]
+
+            #filtering the weak predictions with low probabilities
+            if confidence > args["confidence"]:
+                # scaling the bounding box coordinates wrt the center of box returned from Yolo
+                box = detection[0:4] * np.array([W, H, W, H])
+                (centerX, centerY, width, height) = box.astype("int")
+
+                #use the center coordiantes to compute box corners
+                x = int(centerX - (width / 2))
+                y = int(centerY - (height /2))
+
+                #populate the lists of bounding boxes, confidences and classes
+                boxes.append([x, y, int(width), int(height)])
+                confidences.append(float(confidence))
+                classIDs.append(classID)
+
+    #Apply the non-maximun suppression to remove the overlapping bounding boxes
+    idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
+    #check for the existence of detections:
+    if len(idxs) > 0:
+        for i in idxs.flatten():
+            #bounding box coordinates
+            (x, y) = (boxes[i][0], boxes[i][1])
+            (w, h) = (boxes[i][2], boxes[i][3])
+
+            #draw a bounding box rectangle and label on the frame
+            color = [int(c) for c in COLORS[classIDs[i]]]
+            cv2.rectangle(frame, (x,y), (x+w, y+h), color, 2)
+            text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+            cv2.putText(frame, text, (x, y -5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    #check if the video writer is None
+    if writer is None:
+        #initialize the video writer
+        fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+        writer = cv2.VideoWriter(args["output"], fourcc, 30, (frame.shape[1], frame.shape[0]), True)
+
+        #processing time on single frame
+        if total > 0:
+            elap = (end - start)
+            print("single frame took {:.4f} seconds".format(elap))
+            print("estimated total time to process: {:.4f}".format(elap * total))
+
+    #write the output frame to disk
+    writer.write(frame)
+
+#release and clean up the file pointers
+writer.release()
+vs.release()
+
