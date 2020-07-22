@@ -4,11 +4,13 @@ import imutils
 import time
 import cv2
 import os
+import copy
 
 #arguments parser to input video file
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", required=True, help="the input directory")
 ap.add_argument("-o", "--output", required=True, help="the output directory")
+#ap.add_argument("-r", "--result", required=True, help="the image of person saved directory")
 ap.add_argument("-y", "--yolo", required=True, help="directory to Yolo libraries and weights")
 ap.add_argument("-c", "--confidence", type=float, default=0.5, help="min probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3, help="threshold for applying NMS")
@@ -34,7 +36,6 @@ ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
 #initialization of video stream, frame dimension, pointer to output video
 vs = cv2.VideoCapture(args["input"])
-#vs = cv2.VideoCapture('videos/overpass.mp4')
 print(vs.isOpened())
 writer = None
 (W, H) = (None, None)
@@ -80,7 +81,7 @@ while True: #looping over video frames
 
     for output in layerOutputs:
         #loop over each of detection
-        for detection  in output:
+        for detection in output:
             #retrieve the classes and probabilities of detection
             scores = detection[5:]
             classID = np.argmax(scores)
@@ -93,28 +94,39 @@ while True: #looping over video frames
                 (centerX, centerY, width, height) = box.astype("int")
 
                 #use the center coordiantes to compute box corners
-                x = int(centerX - (width / 2))
-                y = int(centerY - (height /2))
+                x = int(centerX - (width / 2)) #left
+                y = int(centerY - (height / 2)) #top
 
                 #populate the lists of bounding boxes, confidences and classes
                 boxes.append([x, y, int(width), int(height)])
                 confidences.append(float(confidence))
                 classIDs.append(classID)
+                #print(classIDs)
 
+    counter = 0
+    result_path = "/Users/navidrahimi/Code/Python/Yolo-v4/personImg"
     #Apply the non-maximun suppression to remove the overlapping bounding boxes
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
     #check for the existence of detections:
     if len(idxs) > 0:
         for i in idxs.flatten():
-            #bounding box coordinates
-            (x, y) = (boxes[i][0], boxes[i][1])
-            (w, h) = (boxes[i][2], boxes[i][3])
+            if LABELS[classIDs[i]] == "person":
 
-            #draw a bounding box rectangle and label on the frame
-            color = [int(c) for c in COLORS[classIDs[i]]]
-            cv2.rectangle(frame, (x,y), (x+w, y+h), color, 2)
-            text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
-            cv2.putText(frame, text, (x, y -5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                #bounding box coordinates
+                (x, y) = (boxes[i][0], boxes[i][1])
+                (w, h) = (boxes[i][2], boxes[i][3])
+
+                person_img = frame[y:y+h, x:x+w, :]
+                img_display = copy.deepcopy(person_img)
+                cv2.imwrite(os.path.join(result_path, f'person{counter}.png'), img_display)
+                counter = counter + 1
+
+
+                #draw a bounding box rectangle and label on the frame
+                color = [int(c) for c in COLORS[classIDs[i]]]
+                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+                text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+                cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     #check if the video writer is None
     if writer is None:
