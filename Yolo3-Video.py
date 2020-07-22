@@ -10,7 +10,7 @@ import copy
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", required=True, help="the input directory")
 ap.add_argument("-o", "--output", required=True, help="the output directory")
-#ap.add_argument("-r", "--result", required=True, help="the image of person saved directory")
+ap.add_argument("-r", "--result", required=True, help="the image of person saved directory")
 ap.add_argument("-y", "--yolo", required=True, help="directory to Yolo libraries and weights")
 ap.add_argument("-c", "--confidence", type=float, default=0.5, help="min probability to filter weak detections")
 ap.add_argument("-t", "--threshold", type=float, default=0.3, help="threshold for applying NMS")
@@ -104,7 +104,6 @@ while True: #looping over video frames
                 #print(classIDs)
 
     counter = 0
-    result_path = "/Users/navidrahimi/Code/Python/Yolo-v4/personImg"
     #Apply the non-maximun suppression to remove the overlapping bounding boxes
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
     #check for the existence of detections:
@@ -118,8 +117,8 @@ while True: #looping over video frames
 
                 person_img = frame[y:y+h, x:x+w, :]
                 img_display = copy.deepcopy(person_img)
-                cv2.imwrite(os.path.join(result_path, f'person{counter}.png'), img_display)
-                counter = counter + 1
+                #cv2.imwrite(os.path.join(result_path, f'person{counter}.png'), img_display)
+                #counter = counter + 1
 
 
                 #draw a bounding box rectangle and label on the frame
@@ -127,6 +126,11 @@ while True: #looping over video frames
                 cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
                 text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
                 cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    #person_img = frame[y:y + h, x:x + w, :]
+    #img_display = copy.deepcopy(person_img)
+    cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), img_display)
+    counter = counter + 1
 
     #check if the video writer is None
     if writer is None:
