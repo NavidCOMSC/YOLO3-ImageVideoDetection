@@ -118,7 +118,8 @@ while True: #looping over video frames
                 person_img = frame[y:y+h, x:x+w, :]
                 img_display = copy.deepcopy(person_img)
                 #cv2.imwrite(os.path.join(result_path, f'person{counter}.png'), img_display)
-                #counter = counter + 1
+                cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), img_display)
+                counter = counter + 1
 
 
                 #draw a bounding box rectangle and label on the frame
@@ -129,8 +130,8 @@ while True: #looping over video frames
 
     #person_img = frame[y:y + h, x:x + w, :]
     #img_display = copy.deepcopy(person_img)
-    cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), img_display)
-    counter = counter + 1
+    #cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), img_display)
+    #counter = counter + 1
 
     #check if the video writer is None
     if writer is None:
