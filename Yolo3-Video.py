@@ -115,10 +115,10 @@ while True: #looping over video frames
                 (x, y) = (boxes[i][0], boxes[i][1])
                 (w, h) = (boxes[i][2], boxes[i][3])
 
-                person_img = frame[y:y+h, x:x+w, :]
-                img_display = copy.deepcopy(person_img)
+                deepFrame = copy.deepcopy(frame)
+                person_img = deepFrame[y:y+h, x:x+w, :]
                 #cv2.imwrite(os.path.join(result_path, f'person{counter}.png'), img_display)
-                cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), img_display)
+                cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), person_img)
                 counter = counter + 1
 
 
@@ -128,10 +128,6 @@ while True: #looping over video frames
                 text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
                 cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-    #person_img = frame[y:y + h, x:x + w, :]
-    #img_display = copy.deepcopy(person_img)
-    #cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), img_display)
-    #counter = counter + 1
 
     #check if the video writer is None
     if writer is None:
