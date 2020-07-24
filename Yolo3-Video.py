@@ -53,6 +53,7 @@ except:
     print("no approximation, the exact time can be printed")
     total = -1
 
+counter = 0
 while True: #looping over video frames
     #read and grab frames
     (grabbed, frame) = vs.read()
@@ -66,6 +67,9 @@ while True: #looping over video frames
     if W is None or H is None:
         (H, W) = frame.shape[:2]
         print(frame.shape[:2])
+
+    #deep copying of numpy array
+    deepFrame = copy.deepcopy(frame)
 
     #construct a blob from input frame and perform a Yolo forward pass
     blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416), swapRB=True, crop=False)
@@ -103,7 +107,7 @@ while True: #looping over video frames
                 classIDs.append(classID)
                 #print(classIDs)
 
-    counter = 0
+
     #Apply the non-maximun suppression to remove the overlapping bounding boxes
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
     #check for the existence of detections:
@@ -115,18 +119,18 @@ while True: #looping over video frames
                 (x, y) = (boxes[i][0], boxes[i][1])
                 (w, h) = (boxes[i][2], boxes[i][3])
 
-                deepFrame = copy.deepcopy(frame)
+                #deepFrame = copy.deepcopy(frame)
                 person_img = deepFrame[y:y+h, x:x+w, :]
-                #cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), person_img)
-                cv2.imwrite(os.path.sep.join([args["result"], "person{}.png".format(counter)]), person_img)
+                cv2.imwrite(os.path.sep.join([args["result"], f'person{counter}.png']), person_img)
+                #cv2.imwrite(os.path.sep.join([args["result"], "person{}.png".format(counter)]), person_img)
                 counter = counter + 1
 
 
-                #draw a bounding box rectangle and label on the frame
-                color = [int(c) for c in COLORS[classIDs[i]]]
-                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-                text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
-                cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            #draw a bounding box rectangle and label on the frame
+            color = [int(c) for c in COLORS[classIDs[i]]]
+            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+            text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+            cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
     #check if the video writer is None
