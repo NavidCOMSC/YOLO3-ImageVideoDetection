@@ -114,6 +114,7 @@ while True: #looping over video frames
     if len(idxs) > 0:
         for i in idxs.flatten():
 
+            #Bounding Boxes corrdination and geometry
             (x, y) = (boxes[i][0], boxes[i][1])
             (w, h) = (boxes[i][2], boxes[i][3])
 
@@ -125,7 +126,7 @@ while True: #looping over video frames
 
                 #deepFrame = copy.deepcopy(frame)
                 person_img = deepFrame[y:y+h, x:x+w, :]
-                cv2.imwrite(os.path.sep.join([args["result"], f'ShopRear{counter}.png']), person_img)
+                cv2.imwrite(os.path.sep.join([args["result"], f'ShopFrontLeft{counter}.png']), person_img)
                 #cv2.imwrite(os.path.sep.join([args["result"], "person{}.png".format(counter)]), person_img)
                 counter = counter + 1
 
