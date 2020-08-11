@@ -54,104 +54,106 @@ except:
     total = -1
 
 counter = 0
+counterframe = 0
 while True: #looping over video frames
     #read and grab frames
     (grabbed, frame) = vs.read()
+    #print(len(frame))
 
 
     #if there is no frame ready to grab, reached end of the file
     if not grabbed:
         break
 
-    #if there is no dimension for frame, provide them
-    if W is None or H is None:
-        (H, W) = frame.shape[:2]
-        print(frame.shape[:2])
+    counterframe += 1
 
-    #deep copying of numpy array
-    deepFrame = copy.deepcopy(frame)
+    if counterframe % 25 == 0:
 
-    #construct a blob from input frame and perform a Yolo forward pass
-    blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416), swapRB=True, crop=False)
-    net.setInput(blob)
-    start = time.time()
-    layerOutputs = net.forward(ln)
-    end = time.time()
+        #if there is no dimension for frame, provide them
+        if W is None or H is None:
+            (H, W) = frame.shape[:2]
+            print(frame.shape[:2])
 
-    #initialization of lists for bounding boxes, confidences and classes
-    boxes = []
-    confidences = []
-    classIDs = []
+        #deep copying of numpy array
+        deepFrame = copy.deepcopy(frame)
 
-    for output in layerOutputs:
-        #loop over each of detection
-        for detection in output:
-            #retrieve the classes and probabilities of detection
-            scores = detection[5:]
-            classID = np.argmax(scores)
-            confidence = scores[classID]
+        #construct a blob from input frame and perform a Yolo forward pass
+        blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+        net.setInput(blob)
+        start = time.time()
+        layerOutputs = net.forward(ln)
+        end = time.time()
 
-            #filtering the weak predictions with low probabilities
-            if confidence > args["confidence"]:
-                # scaling the bounding box coordinates wrt the center of box returned from Yolo
-                box = detection[0:4] * np.array([W, H, W, H])
-                (centerX, centerY, width, height) = box.astype("int")
+        #initialization of lists for bounding boxes, confidences and classes
+        boxes = []
+        confidences = []
+        classIDs = []
 
-                #use the center coordiantes to compute box corners
-                x = int(centerX - (width / 2)) #left
-                y = int(centerY - (height / 2)) #top
+        for output in layerOutputs:
+            #loop over each of detection
+            for detection in output:
+                #retrieve the classes and probabilities of detection
+                scores = detection[5:]
+                classID = np.argmax(scores)
+                confidence = scores[classID]
 
-                #populate the lists of bounding boxes, confidences and classes
-                boxes.append([x, y, int(width), int(height)])
-                confidences.append(float(confidence))
-                classIDs.append(classID)
-                #print(classIDs)
+                #filtering the weak predictions with low probabilities
+                if confidence > args["confidence"]:
+                    # scaling the bounding box coordinates wrt the center of box returned from Yolo
+                    box = detection[0:4] * np.array([W, H, W, H])
+                    (centerX, centerY, width, height) = box.astype("int")
 
+                    #use the center coordiantes to compute box corners
+                    x = int(centerX - (width / 2)) #left
+                    y = int(centerY - (height / 2)) #top
 
-    #Apply the non-maximun suppression to remove the overlapping bounding boxes
-    idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
-    #check for the existence of detections:
-    if len(idxs) > 0:
-        for i in idxs.flatten():
-
-            #Bounding Boxes corrdination and geometry
-            (x, y) = (boxes[i][0], boxes[i][1])
-            (w, h) = (boxes[i][2], boxes[i][3])
-
-            if LABELS[classIDs[i]] == "person":
-
-                #bounding box coordinates
-                #(x, y) = (boxes[i][0], boxes[i][1])
-                #(w, h) = (boxes[i][2], boxes[i][3])
-
-                #deepFrame = copy.deepcopy(frame)
-                person_img = deepFrame[y:y+h, x:x+w, :]
-                cv2.imwrite(os.path.sep.join([args["result"], f'ShopFrontLeft{counter}.png']), person_img)
-                #cv2.imwrite(os.path.sep.join([args["result"], "person{}.png".format(counter)]), person_img)
-                counter = counter + 1
+                    #populate the lists of bounding boxes, confidences and classes
+                    boxes.append([x, y, int(width), int(height)])
+                    confidences.append(float(confidence))
+                    classIDs.append(classID)
+                    #print(classIDs)
 
 
-            #draw a bounding box rectangle and label on the frame
-            color = [int(c) for c in COLORS[classIDs[i]]]
-            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-            text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
-            cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        #Apply the non-maximun suppression to remove the overlapping bounding boxes
+        idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"], args["threshold"])
+        #check for the existence of detections:
+        if len(idxs) > 0:
+            for i in idxs.flatten():
+
+                #Bounding Boxes corrdination and geometry
+                (x, y) = (boxes[i][0], boxes[i][1])
+                (w, h) = (boxes[i][2], boxes[i][3])
+
+                if LABELS[classIDs[i]] == "person":
+
+                    #deepFrame = copy.deepcopy(frame)
+                    person_img = deepFrame[y:y+h, x:x+w, :]
+                    cv2.imwrite(os.path.sep.join([args["result"], f'ShopFrontLeft{counter}.png']), person_img)
+                    #cv2.imwrite(os.path.sep.join([args["result"], "person{}.png".format(counter)]), person_img)
+                    counter = counter + 1
 
 
-    #check if the video writer is None
-    if writer is None:
-        #initialize the video writer
-        fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-        writer = cv2.VideoWriter(args["output"], fourcc, 30, (frame.shape[1], frame.shape[0]), True)
+                #draw a bounding box rectangle and label on the frame
+                color = [int(c) for c in COLORS[classIDs[i]]]
+                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+                text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+                cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-        #processing time on single frame
-        if total > 0:
-            elap = (end - start)
-            print("single frame took {:.4f} seconds".format(elap))
-            print("estimated total time to process: {:.4f}".format(elap * total))
 
-    #write the output frame to disk
-    writer.write(frame)
+        #check if the video writer is None
+        if writer is None:
+            #initialize the video writer
+            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+            writer = cv2.VideoWriter(args["output"], fourcc, 30, (frame.shape[1], frame.shape[0]), True)
+
+            #processing time on single frame
+            if total > 0:
+                elap = (end - start)
+                print("single frame took {:.4f} seconds".format(elap))
+                print("estimated total time to process: {:.4f}".format(elap * total))
+
+        #write the output frame to disk
+        writer.write(frame)
 
 #release and clean up the file pointers
 writer.release()
