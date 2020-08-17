@@ -128,7 +128,7 @@ while True: #looping over video frames
 
                     #deepFrame = copy.deepcopy(frame)
                     person_img = deepFrame[y:y+h, x:x+w, :]
-                    cv2.imwrite(os.path.sep.join([args["result"], f'ShopMiddleSkipped{counter}.png']), person_img)
+                    cv2.imwrite(os.path.sep.join([args["result"], f'ShopRearSkipped{counter}.png']), person_img)
                     #cv2.imwrite(os.path.sep.join([args["result"], "person{}.png".format(counter)]), person_img)
                     counter = counter + 1
 
